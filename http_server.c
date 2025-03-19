@@ -7,43 +7,29 @@
 #include <err.h>
 #include <errno.h>
 
-/* holder for output of getaddrinfo() information*/
-struct addrinfo {
-    int                 ai_flags;     // AI_PASSIVE, AI_CANONNAME, etc.
-    int                 ai_family;    // AF_INET, AF_INET6, AF_UNSPEC
-    int                 ai_socktype;  // SOCK_STREAM, SOCK_DGRAM
-    int                 ai_protocol;  // use 0 for "any"
-    size_t              ai_addrlen;   // size of ai_addr in bytes
-    struct sockaddr_in  *ai_addr;      // struct sockaddr_in or _in6
-    char                *ai_canonname; // full canonical hostname
+#include "net_structs.h"
 
-    struct addrinfo *ai_next;      // linked list, next node
+#define PORT "2001"
+#define BACKLOG 10
+#define MAX_BUFFER 1024
 
-};
-
-/* Internt address */
-struct sockaddr_in {
-    short int          sin_family;  // Address family, AF_INET
-    unsigned short int sin_port;    // Port number
-    struct in_addr     sin_addr;    // Internet address
-    unsigned char      sin_zero[8]; // Same size as struct sockaddr
-};
-
-/* Socket address */
-// struct sockaddr {
-//     unsigned short    sa_family;    // address family, AF_xxx
-//     char              sa_data[14];  // 14 bytes of protocol address
-// };
-
-/* IP address */
-struct in_addr {
-    uint32_t s_addr; // that's a 32-bit int (4 bytes)
-};
-
+//int argc, char* argv[]
 int main() {
-    int status;
-    struct addrinfo hints, *res;
-    struct sockaddr_in socket_address;
+    int sockfd, newfd;
+    struct sockaddr_storage inc_ip;
+    socklen_t addr_size;
+    struct addrinfo hints, *res, *p;
+    struct sockaddr_in *sock;
+    struct sockaddr_in6 *sock6;
+    char *ipver;
+
+    char *msg = "hi from sock world";
+    char *buff;
+    int bytes_sent, bytes_rec;
+
+    // if (argc < 2) {
+    //     fprintf(stderr, "must provide a hostname");
+    // };
 
     memset(&hints, 0, sizeof(hints)); // ensure hints is empty
 
@@ -51,22 +37,59 @@ int main() {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    if ((status = getaddrinfo(NULL, "2000", &hints, &res) != 0)) {
-        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
+    // Check that getaddrinfo returned successfully
+    if ((sockfd = getaddrinfo(NULL, PORT, &hints, &res) != 0)) {
+        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(sockfd));
         return 2;
     };
 
-    // create socket
-    int s = socket(PF_INET, SOCK_STREAM, 0);
-    if (s == -1) {
+    // Check that linked list has valid entries
+    // for (p = res; p =! NULL; p = p->ai_next) {
+    //     if (p->ai_family == "AF_INET") {
+    //         sock = p->ai_addr;
+    //         // struct in_addr *address = &(p->ai_addr->sin_addr);
+    //         ipver = &("IPv4");
+    //         fprintf(stdout, "using IPv4");
+    //     } else {
+    //         sock6 = p->ai_addr;
+    //         // struct in6_addr *address = &(p->ai_addr->sin_addr);
+    //         ipver = &("IPv6");
+    //         fprintf(stdout, "using IPv6");
+    //     };
+    // };
+
+    // Create socket
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (sockfd == -1) {
         perror("webserver (socket)");
         return 1;
     };
     printf ("socket created succesfully");
-    return 0;
 
-    // create socket bind parameters
+    // Create socket bind parameters
+    if (*ipver == "IPv4") {
+        int b = bind(sockfd, sock, sizeof(sock->sin_addr));
+        if (b == -1) {
+            fprintf(stderr, " failed with error number %d", errno);
+            return 1;
+        };
+    } else {
+        int b = bind(sockfd, sock6, sizeof(sock6->sin6_addr));
+        if (b == -1) {
+            fprintf(stderr, " failed with error number %d", errno);
+            return 1;
+        };
+    };
 
-    // free memory
+    listen(sockfd, BACKLOG);
+    newfd = accept(sockfd, (struct sockaddr *)&inc_ip, &addr_size);
+    bytes_sent = send(newfd, msg, strlen(msg), 0);
+    bytes_rec = recv(newfd, buff, MAX_BUFFER, 0);
+
+    fprintf(stdout, "%s", buff);
+
+    // Release memory
     freeaddrinfo(res);
+
+    return 0;
 }
