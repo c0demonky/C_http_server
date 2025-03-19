@@ -1,3 +1,6 @@
+#ifndef NETSTRUCTS_H
+#define NETSTRUCTS_H
+
 /* holder for output of getaddrinfo() information*/
 struct addrinfo {
     int                 ai_flags;     // AI_PASSIVE, AI_CANONNAME, etc.
@@ -50,3 +53,4 @@ struct in6_addr {
     unsigned char   ip6_addr[16];   // IPv6 address
 };
 
+#endif

@@ -4,10 +4,11 @@
 #include <netinet/in.h>
 #include <netinet/ip.h> /* superset of previous */
 #include <stdlib.h>
+#include <string.h>
 #include <err.h>
 #include <errno.h>
 
-#include "net_structs.h"
+// #include "netstructs.h"
 
 #define PORT "2001"
 #define BACKLOG 10
