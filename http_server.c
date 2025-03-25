@@ -14,7 +14,7 @@
 
 // #include "netstructs.h"
 
-#define PORT "30013"
+#define PORT "3480"
 #define BACKLOG 10
 #define MAX_BUFFER 1024
 
@@ -36,7 +36,7 @@ void *get_addr_in(struct sockaddr* sa) {
 }
 
 int main(int argc, char* argv[]) {
-    int sockfd, newfd;
+    int sockfd, newfd, sin_size;
     struct sockaddr_storage inc_ip;
     socklen_t addr_size;
     struct addrinfo hints, *res, *p;
@@ -44,10 +44,10 @@ int main(int argc, char* argv[]) {
     int result;
     char *ipver, *s;
 
-    if (argc < 2) {
-        fprintf(stderr, "must provide a hostname");
-        exit(1);
-    }
+    // if (argc < 2) {
+    //     fprintf(stderr, "must provide a hostname");
+    //     exit(1);
+    // }
 
     memset(&hints, 0, sizeof(hints)); // ensure hints is empty
     hints.ai_family = AF_UNSPEC;
@@ -55,14 +55,15 @@ int main(int argc, char* argv[]) {
     hints.ai_flags = AI_PASSIVE;
 
     // Check that getaddrinfo returned successfully
-    if ((result = getaddrinfo(NULL, PORT, &hints, &res) != 0)) {
+    if ((result = getaddrinfo(NULL, PORT, &hints, &res)) != 0) {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(result));
         return 2;
     }
 
     // Check that linked list has valid entries
-    for (p = res; p =! NULL; p = p->ai_next) {
-        if ((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+    for (p = res; p != NULL; p = p->ai_next) {
+        fprintf(stderr, "hi\n");
+        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("socket error");
             continue;
         };
@@ -74,7 +75,7 @@ int main(int argc, char* argv[]) {
     }
 
     freeaddrinfo(res); // finished with structure
-
+    fprintf(stderr, p->ai_addr);
     if (p == NULL) {
         fprintf(stderr, "socket failed to bind");
         exit(1);
@@ -94,22 +95,23 @@ int main(int argc, char* argv[]) {
     }
 
     while (1) {
-        int sin_size = sizeof(inc_ip);
-        if (newfd = accept(sockfd, (struct sockaddr *)&inc_ip, &sin_size) ==  -1) {
-            perror("accept error");
-            continue;
-        }
-        inet_ntop(inc_ip.ss_family, get_addr_in((struct sockaddr*)&inc_ip), s, sizeof(s));
-        printf("connection was made from %s/n", s);
-        if (!fork()) { // if child process returned
-            close(sockfd); //close old socket
-            if (send(newfd, "hello", 5, 0) == -1) {
-                perror("send");
-                close(newfd);
-                exit(1);
-            }
-        } 
-        close(newfd);
+    sin_size = sizeof(inc_ip);
+    fprintf(stderr, "%d\n", &sin_size);
+    if ((newfd = accept(sockfd, (struct sockaddr *)&inc_ip, &sin_size)) ==  -1) {
+        perror("accept error");
+        exit(1);
     }
+    inet_ntop(inc_ip.ss_family, get_addr_in((struct sockaddr*)&inc_ip), s, sizeof s);
+    printf("connection was made from %s/n", s);
+    if (!fork()) { // if child process returned
+        close(sockfd); //close old socket
+        if (send(newfd, "hello", 5, 0) == -1) {
+            perror("send");
+            close(newfd);
+            exit(1);
+        }
+    close(newfd);
+    }
+}
     return 0;
 }
