@@ -5,9 +5,12 @@
 #include <netinet/ip.h> /* superset of previous */
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 #include <err.h>
+#include <arpa/inet.h>
 #include <errno.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <strings.h>
 
 // #include "netstructs.h"
 
@@ -25,7 +28,7 @@ void sigchld_handler(int s) {
 }
 
 void *get_addr_in(struct sockaddr* sa) {
-    if (strcomp(sa->sa_family, "AF_INET") == 1) {
+    if (strcmp(sa->sa_family, "AF_INET") == 1) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     } else {
         return &(((struct sockaddr_in6*)sa)->sin6_addr);
