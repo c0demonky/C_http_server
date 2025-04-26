@@ -1,18 +1,13 @@
 #include <sys/socket.h>
 #include <stdio.h>
 #include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/ip.h> /* superset of previous */
 #include <stdlib.h>
 #include <unistd.h>
-#include <err.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <strings.h>
-
-// #include "netstructs.h"
 
 #define PORT "3481"
 #define BACKLOG 10
@@ -28,7 +23,7 @@ void sigchld_handler(int s) {
 }
 
 void *get_addr_in(struct sockaddr* sa) {
-    if ((sa->sa_family == "AF_INET") == 1) {
+    if ((strcmp((sa->sa_family),"AF_INET")) == 1) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     } else {
         return &(((struct sockaddr_in6*)sa)->sin6_addr);
@@ -56,7 +51,7 @@ int main(int argc, char* argv[]) {
     // Check that getaddrinfo returned successfully
     if ((result = getaddrinfo(NULL, PORT, &hints, &res)) != 0) {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(result));
-        return 2;
+        return EXIT_FAILURE;
     }
 
     // Check that linked list has valid entries
@@ -65,14 +60,22 @@ int main(int argc, char* argv[]) {
             perror("socket error");
             continue;
         };
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            perror("bind error");
-            continue;
+        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == 0) {
+            break;
         };
-        break;
+        close(sockfd);
     }
 
+    if (p == NULL) {
+        fprintf(stderr, "no address binded successfully");
+        return EXIT_FAILURE;
+    }
     freeaddrinfo(res); // finished with structure
+
+    fprintf(stderr,"%d/n", p->ai_family);
+    
+    inet_ntop(p->ai_family, p->ai_addr, s, sizeof s);
+    fprintf(stderr, "socket created on %s\n", s);
 
     if (p == NULL) {
         fprintf(stderr, "socket failed to bind");
@@ -92,27 +95,31 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
+     
+
     while (1) {
         sin_size = sizeof(inc_ip);
-        fprintf(stderr, "%s\n", inc_ip.ss_family);
-        if ((newfd = accept(sockfd, (struct sockaddr *)&inc_ip, &sin_size)) ==  -1) {
+        if ((newfd = accept(sockfd, (struct sockaddr *)&inc_ip, (unsigned int*)&sin_size)) ==  -1) {
             perror("accept error");
             exit(1);
         }
 
         inet_ntop(inc_ip.ss_family, get_addr_in((struct sockaddr*)&inc_ip), s, sizeof s);
-        fprintf(stderr, "connection was made from %s\n", s);
+        printf("connection was made from %s\n", s);
         if (!fork()) { // if child process returned
             close(sockfd); //close old socket
+            fprintf(stderr, "old socket closed\n");
             if (send(newfd, "hello\n", 7, 0) == -1) {
                 perror("send");
                 close(newfd);
                 exit(1);
             } else {
                 close(newfd);
+                fprintf(stderr, "connecting socket closed\n");
                 break;
             }
         }
     }
+    printf("end\n");
     return 0;
 }
