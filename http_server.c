@@ -23,7 +23,7 @@ void sigchld_handler(int s) {
 }
 
 void *get_addr_in(struct sockaddr* sa) {
-    if ((strcmp((sa->sa_family),"AF_INET")) == 1) {
+    if (sa->sa_family == "AF_INET") {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     } else {
         return &(((struct sockaddr_in6*)sa)->sin6_addr);
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     struct addrinfo hints, *res, *p;
     struct sigaction sa;
     int result;
-    char *s;
+    char *s, *str;
 
     // if (argc < 2) {
     //     fprintf(stderr, "must provide a hostname");
@@ -72,10 +72,10 @@ int main(int argc, char* argv[]) {
     }
     freeaddrinfo(res); // finished with structure
 
-    fprintf(stderr,"%d/n", p->ai_family);
-    
-    inet_ntop(p->ai_family, p->ai_addr, s, sizeof s);
-    fprintf(stderr, "socket created on %s\n", s);
+    fprintf(stderr,"%d\n", p->ai_family);
+
+    str = inet_ntop(p->ai_family, p->ai_addr, &str, sizeof str);
+    fprintf(stderr, "socket created on %s\n", str);
 
     if (p == NULL) {
         fprintf(stderr, "socket failed to bind");
@@ -96,16 +96,16 @@ int main(int argc, char* argv[]) {
     }
 
      
-
+    fprintf(stderr, "accepting connections \n");
     while (1) {
-        sin_size = sizeof(inc_ip);
+        sin_size = sizeof inc_ip;
         if ((newfd = accept(sockfd, (struct sockaddr *)&inc_ip, (unsigned int*)&sin_size)) ==  -1) {
             perror("accept error");
             exit(1);
         }
-
-        inet_ntop(inc_ip.ss_family, get_addr_in((struct sockaddr*)&inc_ip), s, sizeof s);
-        printf("connection was made from %s\n", s);
+        fprintf(stderr, "inside while loop");
+        inet_ntop(inc_ip.ss_family, get_addr_in((struct sockaddr *)&inc_ip), s, sizeof s);
+        fprintf(stderr, "connection was made from %s\n", s);
         if (!fork()) { // if child process returned
             close(sockfd); //close old socket
             fprintf(stderr, "old socket closed\n");
